@@ -1,0 +1,443 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+
+    <title>NOVA HR AI Agent</title>
+
+    <link rel="stylesheet"
+          href="{{ url_for('static', filename='style.css') }}">
+
+</head>
+
+<body>
+
+<div class="container">
+
+   
+
+    <div class="header">
+
+        <h1>🤖 NOVA HR</h1>
+
+        <p>AI-Powered Human Resource Management System</p>
+
+    </div>
+
+
+ 
+
+    <div class="dashboard">
+
+        <div class="stat-card">
+            <h3>👥 Employees</h3>
+            <h2>{{ total_employees }}</h2>
+            <p>Active Employees</p>
+        </div>
+
+        <div class="stat-card">
+            <h3>🏖{{ total_leave}}</h3>
+            <h2>21</h2>
+            <p>Days Taken</p>
+        </div>
+
+        <div class="stat-card">
+            <h3>{{"{:,.0f}".format(total_salary)}}</h3>
+            <h2>₹1.5L</h2>
+            <p>Monthly Payroll</p>
+        </div>
+
+        <div class="stat-card">
+            <h3>📄 Resumes</h3>
+            <h2>35</h2>
+            <p>Analyzed</p>
+        </div>
+
+    </div>
+
+
+ 
+
+    <div class="card">
+
+        <h2>📄 Resume Analyzer</h2>
+
+        <p>
+            Compare a candidate's resume with a job description.
+        </p>
+
+        <form method="POST"
+              enctype="multipart/form-data">
+
+            <input type="hidden"
+                   name="action"
+                   value="resume">
+
+            <label>Job Description</label>
+
+            <textarea
+                name="job"
+                rows="6"
+                placeholder="Enter required skills and job description..."
+                required></textarea>
+
+            <br><br>
+
+            <label>Upload Resume (PDF)</label>
+
+            <br><br>
+
+            <input
+                type="file"
+                name="resume"
+                accept=".pdf"
+                required>
+
+            <br><br>
+
+            <button type="submit">
+                🔍 Analyze Resume
+            </button>
+
+        </form>
+
+
+        {% if result %}
+
+        <h3>Candidate Analysis</h3>
+
+        <pre>{{ result }}</pre>
+
+        {% endif %}
+
+    </div>
+
+
+    
+
+    <div class="card">
+
+        <h2>🏖 Leave Management</h2>
+
+        <p>
+            Apply for employee leave and check leave balance.
+        </p>
+
+        <form method="POST">
+
+            <input type="hidden"
+                   name="action"
+                   value="leave">
+
+            <label>Employee ID</label>
+
+            <input
+                type="text"
+                name="emp_id"
+                placeholder="Example: 101"
+                required>
+
+            <br><br>
+
+            <label>Leave Days</label>
+
+            <input
+                type="number"
+                name="days"
+                min="1"
+                placeholder="Example: 2"
+                required>
+
+            <br><br>
+
+            <button type="submit">
+                🏖 Apply Leave
+            </button>
+
+        </form>
+
+
+        {% if leave_result %}
+
+        <h3>Leave Result</h3>
+
+        <pre>{{ leave_result }}</pre>
+
+        {% endif %}
+
+    </div>
+
+
+   
+
+    <div class="card">
+
+        <h2>💰 Payroll Management</h2>
+
+        <p>
+            Generate an employee salary payslip.
+        </p>
+
+        <form method="POST">
+
+            <input type="hidden"
+                   name="action"
+                   value="salary">
+
+            <label>Employee ID</label>
+
+            <input
+                type="text"
+                name="salary_emp_id"
+                placeholder="Example: 101"
+                required>
+
+            <br><br>
+
+            <label>Basic Salary</label>
+
+            <input
+                type="number"
+                name="basic_salary"
+                placeholder="Example: 30000"
+                required>
+
+            <br><br>
+
+            <label>HRA (%)</label>
+
+            <input
+                type="number"
+                name="hra"
+                value="20"
+                required>
+
+            <br><br>
+
+            <label>DA (%)</label>
+
+            <input
+                type="number"
+                name="da"
+                value="10"
+                required>
+
+            <br><br>
+
+            <label>Deduction</label>
+
+            <input
+                type="number"
+                name="deduction"
+                value="0"
+                required>
+
+            <br><br>
+
+            <button type="submit">
+                💰 Generate Payslip
+            </button>
+
+        </form>
+
+
+        {% if salary_result %}
+
+        <h3>Salary Result</h3>
+
+        <pre>{{ salary_result }}</pre>
+
+        {% endif %}
+
+    </div>
+
+
+    
+
+    <div class="card chatbot">
+
+        <h2>💬 NOVA HR Support Bot</h2>
+
+        <p>
+            Describe your HR problem and get an instant response.
+        </p>
+
+        <form method="POST">
+
+            <input type="hidden"
+                   name="action"
+                   value="chat">
+
+            <textarea
+                name="message"
+                rows="5"
+                placeholder="Example: My salary has not been credited..."
+                required></textarea>
+
+            <br><br>
+
+            <button type="submit">
+                🤖 Ask NOVA
+            </button>
+
+        </form>
+
+
+        {% if chat_result %}
+
+        <h3>🤖 NOVA Response</h3>
+
+        <pre>{{ chat_result }}</pre>
+
+        {% endif %}
+
+    </div>
+
+
+    
+
+    <div class="footer">
+
+        <p>
+            NOVA HR AI Agent • Smart • Fast • Offline
+        </p>
+
+    </div>
+
+</div>
+<!-- ================================================= -->
+<!-- EMPLOYEE MANAGEMENT -->
+<!-- ================================================= -->
+
+<div class="card">
+
+    <h2>👤 Employee Management</h2>
+
+    <p>Add a new employee to the HR database.</p>
+
+    <form method="POST">
+
+        <input
+            type="hidden"
+            name="action"
+            value="add_employee">
+
+        <label>Employee ID</label>
+
+        <input
+            type="text"
+            name="new_emp_id"
+            placeholder="Example: 106"
+            required>
+
+        <br><br>
+
+        <label>Employee Name</label>
+
+        <input
+            type="text"
+            name="new_name"
+            placeholder="Example: Sneha"
+            required>
+
+        <br><br>
+
+        <label>Department</label>
+
+        <input
+            type="text"
+            name="new_department"
+            placeholder="Example: Engineering"
+            required>
+
+        <br><br>
+
+        <label>Basic Salary</label>
+
+        <input
+            type="number"
+            name="new_salary"
+            placeholder="Example: 40000"
+            required>
+
+        <br><br>
+
+        <button type="submit">
+            ➕ Add Employee
+        </button>
+
+    </form>
+
+    {% if employee_result %}
+
+    <h3>Employee Result</h3>
+
+    <pre>{{ employee_result }}</pre>
+
+    {% endif %}
+
+</div>
+<!-- ================================================= -->
+<!-- EMPLOYEE DIRECTORY -->
+<!-- ================================================= -->
+
+<div class="card">
+
+    <h2>👥 Employee Directory</h2>
+
+    {% if employee_list %}
+
+    <div style="overflow-x:auto;">
+
+        <table>
+
+            <tr>
+                <th>ID</th>
+                <th>Name</th>
+                <th>Department</th>
+                <th>Leave Taken</th>
+                <th>Salary</th>
+                <th>Status</th>
+            </tr>
+
+            {% for emp_id, emp in employee_list %}
+
+            <tr>
+
+                <td>{{ emp_id }}</td>
+
+                <td>{{ emp.name }}</td>
+
+                <td>{{ emp.department }}</td>
+
+                <td>{{ emp.leave_taken }} days</td>
+
+                <td>
+                    {% if emp.salary is defined %}
+                        ₹{{ "{:,.0f}".format(emp.salary) }}
+                    {% else %}
+                        Not Set
+                    {% endif %}
+                </td>
+
+                <td>🟢 Active</td>
+
+            </tr>
+
+            {% endfor %}
+
+        </table>
+
+    </div>
+
+    {% else %}
+
+    <p>No employees found.</p>
+
+    {% endif %}
+
+</div>
+
+</body>
+
+</html>
