@@ -12,9 +12,43 @@ EMPLOYEE_FILE = "employees.json"
 os.makedirs(UPLOAD_FOLDER, exist_ok=True)
 
 
-# ==============================
+# ==========================================
+# GEMINI AI
+# ==========================================
+
+def ask_nova(prompt):
+
+    api_key = os.getenv("GEMINI_API_KEY")
+
+    if not api_key:
+
+        return "❌ Gemini API key is not configured."
+
+    try:
+
+        from google import genai
+
+        client = genai.Client(
+            api_key=api_key
+        )
+
+        response = client.models.generate_content(
+            model="gemini-2.5-flash",
+            contents=prompt
+        )
+
+        return response.text
+
+    except Exception as e:
+
+        print("Gemini Error:", e)
+
+        return "❌ NOVA AI is temporarily unavailable."
+
+
+# ==========================================
 # EMPLOYEE DATA
-# ==============================
+# ==========================================
 
 def load_employees():
 
@@ -22,21 +56,31 @@ def load_employees():
 
         return {}
 
-    with open(EMPLOYEE_FILE, "r") as file:
+    with open(
+        EMPLOYEE_FILE,
+        "r"
+    ) as file:
 
         return json.load(file)
 
 
 def save_employees(employees):
 
-    with open(EMPLOYEE_FILE, "w") as file:
+    with open(
+        EMPLOYEE_FILE,
+        "w"
+    ) as file:
 
-        json.dump(employees, file, indent=4)
+        json.dump(
+            employees,
+            file,
+            indent=4
+        )
 
 
-# ==============================
+# ==========================================
 # PDF READER
-# ==============================
+# ==========================================
 
 def extract_text(pdf_path):
 
@@ -55,11 +99,14 @@ def extract_text(pdf_path):
     return text
 
 
-# ==============================
+# ==========================================
 # MAIN PAGE
-# ==============================
+# ==========================================
 
-@app.route("/", methods=["GET", "POST"])
+@app.route(
+    "/",
+    methods=["GET", "POST"]
+)
 def home():
 
     result = ""
@@ -70,20 +117,31 @@ def home():
 
     employees = load_employees()
 
+
+    # ======================================
+    # POST ACTIONS
+    # ======================================
+
     if request.method == "POST":
 
-        action = request.form.get("action")
+        action = request.form.get(
+            "action"
+        )
 
 
-        # ==============================
-        # RESUME ANALYZER
-        # ==============================
+        # ==================================
+        # AI RESUME ANALYZER
+        # ==================================
 
         if action == "resume":
 
-            job = request.form["job"].lower()
+            job = request.form[
+                "job"
+            ]
 
-            resume = request.files["resume"]
+            resume = request.files[
+                "resume"
+            ]
 
             filepath = os.path.join(
                 UPLOAD_FOLDER,
@@ -92,8 +150,12 @@ def home():
 
             resume.save(filepath)
 
-            resume_text = extract_text(filepath)
+            resume_text = extract_text(
+                filepath
+            )
 
+
+            # Basic skill matching
             skills = list(
                 set(
                     re.findall(
@@ -121,14 +183,13 @@ def home():
                     missing.append(skill)
 
 
-            total_skills = len(matched) + len(missing)
+            total_skills = (
+                len(matched)
+                + len(missing)
+            )
 
 
-            if total_skills == 0:
-
-                score = 0
-
-            else:
+            if total_skills > 0:
 
                 score = int(
                     len(matched)
@@ -136,50 +197,119 @@ def home():
                     * 100
                 )
 
-
-            if score >= 75:
-
-                recommendation = "HIRE"
-
-            elif score >= 50:
-
-                recommendation = "CONSIDER"
-
             else:
 
-                recommendation = "REJECT"
+                score = 0
 
 
-            result = f"""
-========================================
-          NOVA HR AI REPORT
-========================================
+            # ==================================
+            # GEMINI RESUME ANALYSIS
+            # ==================================
 
-MATCH SCORE:
+            resume_prompt = f"""
+You are NOVA, an advanced AI recruitment assistant.
+
+Analyze this candidate resume against the job description.
+
+JOB DESCRIPTION:
+
+{job}
+
+RESUME:
+
+{resume_text[:12000]}
+
+Basic skill match score:
 {score}%
 
-MATCHED SKILLS:
-{chr(10).join("- " + x for x in matched)}
+Matched skills:
+{", ".join(matched)}
 
-MISSING SKILLS:
-{chr(10).join("- " + x for x in missing)}
+Missing skills:
+{", ".join(missing)}
 
-RECOMMENDATION:
-{recommendation}
+Provide:
 
-========================================
+1. Overall candidate assessment
+2. Key strengths
+3. Missing or weak skills
+4. Relevant experience
+5. Potential concerns
+6. Interview recommendation
+7. Three interview questions
+
+Be professional, objective and concise.
+
+Do NOT make decisions based on age, gender,
+religion, race, disability, nationality or other
+protected characteristics.
+
+Do not invent information that is not present
+in the resume.
 """
 
 
-        # ==============================
+            ai_resume = ask_nova(
+                resume_prompt
+            )
+
+
+            result = f"""
+╔══════════════════════════════════════════╗
+║       🤖 NOVA AI RESUME INTELLIGENCE     ║
+╚══════════════════════════════════════════╝
+
+📄 RESUME ANALYSIS COMPLETE
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+🎯 SKILL MATCH SCORE
+
+                  {score}%
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+✅ MATCHED SKILLS
+
+{chr(10).join("• " + x for x in matched)
+if matched else "No direct matches found."}
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+❌ MISSING / UNMATCHED SKILLS
+
+{chr(10).join("• " + x for x in missing)
+if missing else "No major missing skills detected."}
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+🧠 NOVA AI ASSESSMENT
+
+{ai_resume}
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+          NOVA RECRUITMENT INTELLIGENCE
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+"""
+
+
+        # ==================================
         # LEAVE MANAGEMENT
-        # ==============================
+        # ==================================
 
         elif action == "leave":
 
-            emp_id = request.form["emp_id"]
+            emp_id = request.form[
+                "emp_id"
+            ]
 
-            days = int(request.form["days"])
+            days = int(
+                request.form[
+                    "days"
+                ]
+            )
 
 
             if emp_id not in employees:
@@ -190,16 +320,22 @@ RECOMMENDATION:
 Please enter a valid Employee ID.
 """
 
+
             else:
 
-                employee = employees[emp_id]
+                employee = employees[
+                    emp_id
+                ]
 
                 current_leave = employee.get(
                     "leave_taken",
                     0
                 )
 
-                remaining = 30 - current_leave
+                remaining = (
+                    30
+                    - current_leave
+                )
 
 
                 if days <= 0:
@@ -230,23 +366,50 @@ Remaining:
 
                 else:
 
-                    employee["leave_taken"] = (
-                        current_leave + days
+                    employee[
+                        "leave_taken"
+                    ] = (
+                        current_leave
+                        + days
                     )
 
-                    save_employees(employees)
+                    save_employees(
+                        employees
+                    )
 
                     new_remaining = (
                         30
-                        - employee["leave_taken"]
+                        - employee[
+                            "leave_taken"
+                        ]
                     )
 
+
+                    # AI explanation
+                    leave_ai = ask_nova(
+                        f"""
+You are NOVA HR Assistant.
+
+An employee named {employee["name"]}
+has successfully been approved for
+{days} days of leave.
+
+Department:
+{employee["department"]}
+
+Leave remaining:
+{new_remaining} days.
+
+Give a short professional confirmation
+and useful reminder about returning to work.
+"""
+                    )
+
+
                     leave_result = f"""
-========================================
-
-          🏖 LEAVE APPROVED
-
-========================================
+╔══════════════════════════════════════════╗
+║          🏖 LEAVE APPROVED               ║
+╚══════════════════════════════════════════╝
 
 Employee:
 {employee["name"]}
@@ -266,32 +429,48 @@ Remaining Leave:
 STATUS:
 ✅ APPROVED
 
-========================================
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+🤖 NOVA AI
+
+{leave_ai}
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 """
 
 
-        # ==============================
-        # PAYROLL
-        # ==============================
+        # ==================================
+        # AI-ASSISTED PAYROLL
+        # ==================================
 
         elif action == "salary":
 
-            emp_id = request.form["salary_emp_id"]
+            emp_id = request.form[
+                "salary_emp_id"
+            ]
 
             basic = float(
-                request.form["basic_salary"]
+                request.form[
+                    "basic_salary"
+                ]
             )
 
             hra_percent = float(
-                request.form["hra"]
+                request.form[
+                    "hra"
+                ]
             )
 
             da_percent = float(
-                request.form["da"]
+                request.form[
+                    "da"
+                ]
             )
 
             deduction = float(
-                request.form["deduction"]
+                request.form[
+                    "deduction"
+                ]
             )
 
 
@@ -301,16 +480,23 @@ STATUS:
 ❌ EMPLOYEE NOT FOUND
 """
 
+
             else:
 
-                employee = employees[emp_id]
+                employee = employees[
+                    emp_id
+                ]
 
                 hra_amount = (
-                    basic * hra_percent / 100
+                    basic
+                    * hra_percent
+                    / 100
                 )
 
                 da_amount = (
-                    basic * da_percent / 100
+                    basic
+                    * da_percent
+                    / 100
                 )
 
                 gross_salary = (
@@ -325,12 +511,48 @@ STATUS:
                 )
 
 
+                # AI payslip explanation
+                payroll_ai = ask_nova(
+                    f"""
+You are NOVA HR payroll assistant.
+
+Explain this payslip in simple professional language.
+
+Employee:
+{employee["name"]}
+
+Department:
+{employee["department"]}
+
+Basic salary:
+₹{basic:,.2f}
+
+HRA:
+₹{hra_amount:,.2f}
+
+DA:
+₹{da_amount:,.2f}
+
+Gross salary:
+₹{gross_salary:,.2f}
+
+Deduction:
+₹{deduction:,.2f}
+
+Net salary:
+₹{net_salary:,.2f}
+
+Explain the major components briefly.
+
+Do not change or recalculate the numbers.
+"""
+                )
+
+
                 salary_result = f"""
-========================================
-
-             💰 PAYSLIP
-
-========================================
+╔══════════════════════════════════════════╗
+║             💰 AI PAYSLIP               ║
+╚══════════════════════════════════════════╝
 
 Employee ID:
 {emp_id}
@@ -341,7 +563,7 @@ Employee Name:
 Department:
 {employee["department"]}
 
-----------------------------------------
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
 Basic Salary:
 ₹{basic:,.2f}
@@ -352,7 +574,7 @@ HRA:
 DA:
 ₹{da_amount:,.2f}
 
-----------------------------------------
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
 Gross Salary:
 ₹{gross_salary:,.2f}
@@ -360,88 +582,89 @@ Gross Salary:
 Deduction:
 ₹{deduction:,.2f}
 
-----------------------------------------
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
-NET SALARY:
+💰 NET SALARY
+
 ₹{net_salary:,.2f}
 
-========================================
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+🤖 NOVA AI EXPLANATION
+
+{payroll_ai}
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 """
 
 
-       # ==============================
-# HR SUPPORT BOT - GEMINI AI
-# ==============================
+        # ==================================
+        # NOVA AI HR CHAT
+        # ==================================
 
-elif action == "chat":
+        elif action == "chat":
 
-    message = request.form["message"]
+            message = request.form[
+                "message"
+            ]
 
-    api_key = os.getenv("GEMINI_API_KEY")
 
-    if not api_key:
+            chat_prompt = f"""
+You are NOVA, an AI-powered HR Assistant.
 
-        chat_result = """
-❌ GEMINI API KEY NOT FOUND
+You help employees with:
 
-Please check the GEMINI_API_KEY
-environment variable in Render.
-"""
+• Salary
+• Payroll
+• Leave
+• Attendance
+• Holidays
+• Login problems
+• HR complaints
+• Workplace questions
+• Recruitment
+• General HR support
 
-    else:
+User message:
 
-        try:
-
-            from google import genai
-
-            client = genai.Client(
-                api_key=api_key
-            )
-
-            prompt = f"""
-You are NOVA, an AI HR Assistant.
-
-Help employees with:
-- Salary and payroll
-- Leave
-- Attendance
-- Holidays
-- Login problems
-- HR complaints
-- General HR questions
-
-Be professional, friendly and concise.
-
-Employee message:
 {message}
 
-Give a helpful response.
+Instructions:
+
+Be friendly, professional and concise.
+
+Give practical guidance.
+
+Never claim an HR action was completed
+unless the application actually completed it.
+
+Do not invent company policies.
+
+If a question requires company-specific
+information that you don't have, clearly
+say that the employee should contact HR.
 """
 
-            response = client.models.generate_content(
-                model="gemini-2.5-flash",
-                contents=prompt
+
+            ai_response = ask_nova(
+                chat_prompt
             )
 
-            chat_result = f"""
-🤖 NOVA AI
-
-{response.text}
-"""
-
-        except Exception as e:
 
             chat_result = f"""
-❌ NOVA AI ERROR
+╔══════════════════════════════════════════╗
+║             🤖 NOVA AI                   ║
+╚══════════════════════════════════════════╝
 
-Unable to connect to Gemini.
+{ai_response}
 
-Please try again later.
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 """
 
-        # ==============================
+
+        # ==================================
         # ADD EMPLOYEE
-        # ==============================
+        # ==================================
 
         elif action == "add_employee":
 
@@ -458,7 +681,9 @@ Please try again later.
             ].strip()
 
             salary = float(
-                request.form["new_salary"]
+                request.form[
+                    "new_salary"
+                ]
             )
 
 
@@ -468,9 +693,12 @@ Please try again later.
 ❌ EMPLOYEE ALREADY EXISTS
 """
 
+
             else:
 
-                employees[emp_id] = {
+                employees[
+                    emp_id
+                ] = {
 
                     "name": name,
 
@@ -481,14 +709,43 @@ Please try again later.
                     "salary": salary
                 }
 
-                save_employees(employees)
+                save_employees(
+                    employees
+                )
+
+
+                # AI employee summary
+                employee_ai = ask_nova(
+                    f"""
+You are NOVA HR Assistant.
+
+An employee has been successfully
+added to the HR system.
+
+Name:
+{name}
+
+Employee ID:
+{emp_id}
+
+Department:
+{department}
+
+Basic Salary:
+₹{salary:,.2f}
+
+Create a short professional onboarding
+summary for the HR dashboard.
+
+Do not invent any additional information.
+"""
+                )
+
 
                 employee_result = f"""
-========================================
-
-        ✅ EMPLOYEE ADDED
-
-========================================
+╔══════════════════════════════════════════╗
+║          👤 EMPLOYEE ADDED              ║
+╚══════════════════════════════════════════╝
 
 Employee ID:
 {emp_id}
@@ -506,15 +763,21 @@ Leave Taken:
 0 days
 
 Status:
-ACTIVE
+🟢 ACTIVE
 
-========================================
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+🤖 NOVA AI
+
+{employee_ai}
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 """
 
 
-    # ==============================
+    # ======================================
     # DASHBOARD DATA
-    # ==============================
+    # ======================================
 
     employee_list = list(
         employees.items()
@@ -527,35 +790,54 @@ ACTIVE
 
 
     total_leave = sum(
-        emp.get("leave_taken", 0)
+        emp.get(
+            "leave_taken",
+            0
+        )
         for emp in employees.values()
     )
 
 
     total_salary = sum(
-        emp.get("salary", 0)
+        emp.get(
+            "salary",
+            0
+        )
         for emp in employees.values()
     )
 
 
     return render_template(
         "index.html",
+
         result=result,
+
         leave_result=leave_result,
+
         salary_result=salary_result,
+
         chat_result=chat_result,
+
         employee_result=employee_result,
+
         employee_list=employee_list,
+
         total_employees=total_employees,
+
         total_leave=total_leave,
+
         total_salary=total_salary
     )
 
 
-# ==============================
+# ==========================================
 # START APPLICATION
-# ==============================
+# ==========================================
 
 if __name__ == "__main__":
 
-    app.run(host="0.0.0.0", port=5000, debug=True)
+    app.run(
+        host="0.0.0.0",
+        port=5000,
+        debug=True
+    )
