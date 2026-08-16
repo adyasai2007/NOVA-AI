@@ -369,142 +369,75 @@ NET SALARY:
 """
 
 
-        # ==============================
-        # HR SUPPORT BOT
-        # ==============================
+       # ==============================
+# HR SUPPORT BOT - GEMINI AI
+# ==============================
 
-        elif action == "chat":
+elif action == "chat":
 
-            message = request.form[
-                "message"
-            ].lower()
+    message = request.form["message"]
 
+    api_key = os.getenv("GEMINI_API_KEY")
 
-            if (
-                "salary" in message
-                or "pay" in message
-            ):
+    if not api_key:
 
-                chat_result = """
-💰 SALARY SUPPORT
+        chat_result = """
+❌ GEMINI API KEY NOT FOUND
 
-Please check the Payroll section
-for your payslip and salary details.
-
-If your salary is pending,
-please contact Payroll.
+Please check the GEMINI_API_KEY
+environment variable in Render.
 """
 
+    else:
 
-            elif (
-                "leave" in message
-                or "vacation" in message
-            ):
+        try:
 
-                chat_result = """
-🏖 LEAVE SUPPORT
+            from google import genai
 
-You can apply for leave using
-the Leave Management section.
+            client = genai.Client(
+                api_key=api_key
+            )
 
-Enter your Employee ID and
-number of leave days.
+            prompt = f"""
+You are NOVA, an AI HR Assistant.
+
+Help employees with:
+- Salary and payroll
+- Leave
+- Attendance
+- Holidays
+- Login problems
+- HR complaints
+- General HR questions
+
+Be professional, friendly and concise.
+
+Employee message:
+{message}
+
+Give a helpful response.
 """
 
+            response = client.models.generate_content(
+                model="gemini-2.5-flash",
+                contents=prompt
+            )
 
-            elif "attendance" in message:
+            chat_result = f"""
+🤖 NOVA AI
 
-                chat_result = """
-🕒 ATTENDANCE SUPPORT
-
-Your attendance is maintained
-by the HR department.
-
-Please contact HR if you find
-an incorrect attendance record.
+{response.text}
 """
 
+        except Exception as e:
 
-            elif "holiday" in message:
+            chat_result = f"""
+❌ NOVA AI ERROR
 
-                chat_result = """
-📅 HOLIDAY SUPPORT
+Unable to connect to Gemini.
 
-Please check the company
-holiday calendar or contact HR.
+Please try again later.
 """
-
-
-            elif (
-                "password" in message
-                or "login" in message
-            ):
-
-                chat_result = """
-🔐 ACCOUNT SUPPORT
-
-Please use the password recovery
-option or contact IT support.
-"""
-
-
-            elif (
-                "complaint" in message
-                or "problem" in message
-                or "issue" in message
-            ):
-
-                chat_result = """
-📢 FEEDBACK RECEIVED
-
-Thank you for reporting the issue.
-
-Your feedback has been recorded
-for HR review.
-"""
-
-
-            elif (
-                "hello" in message
-                or "hi" in message
-            ):
-
-                chat_result = """
-🤖 NOVA HR ASSISTANT
-
-Hello! 👋
-
-I can help with:
-
-💰 Salary
-🏖 Leave
-🕒 Attendance
-📅 Holidays
-🔐 Login problems
-📢 HR complaints
-"""
-
-
-            else:
-
-                chat_result = """
-🤖 NOVA HR ASSISTANT
-
-I received your message.
-
-I can help with:
-
-💰 Salary
-🏖 Leave
-🕒 Attendance
-📅 Holidays
-🔐 Login problems
-📢 HR complaints
-
-Please describe your issue
-in more detail.
-"""
-
 
         # ==============================
         # ADD EMPLOYEE
